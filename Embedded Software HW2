@@ -80,7 +80,7 @@ Question 3 ADC Resolution
 
 In an ATMega328P application, an external AREF Voltage of 3.3V has been set as the Analog-to-Digital Converter (ADC) reference voltage, so this is the full-scale voltage, Vfs. Answer the following questions, assuming a 10-bit ADC:
 	i. What is the resolution of the ADC in this configuration?
-			The resolution in this configuration is 3.22*10^-3.
+			The Resolution in this configuration is 3.22*10^-3 mv.
 	ii. If the input voltage applied to the ADC is 2.765V, what result would you expect to read from the ADC register, which holds the conversion result?
 			The Reading from the ADC Register is 857.
 	iii. If the ADC result register has the data 0x319 (793), what voltage was applied at the ADC input pin?
@@ -113,7 +113,7 @@ int timer_Interval(void)
 	TCCR2A = 0;			/* Not strictly necessary as these are the reset states but it's good */
 	/* practice to show what you're doing */
 	TCNT2 = DLY_2_ms;			/* Recall: 256-125 = 131 & 131*64us = 8.38ms, approx 8.38ms	*/
-	TIMSK2 = (1<<TOIE0);		/* Enable Timer 2 interrupt	*/
+	TIMSK2 = (1<<TOIE2);		/* Enable Timer 2 interrupt	*/
 	
 	sei();						/* Global interrupt enable (I=1) */
 	
@@ -127,13 +127,12 @@ ISR(TIMER0_OVF_vect)
 	TCNT2 = DLY_2_ms;		/*	TCNT2 needs to be set to the start point each time */
 	++timecount0;			/* count the number of times the interrupt has been reached	*/
 	
-	if (timecount0 >= COUNT_FOR_10ms)	/* 5 * 2ms = 10ms */
+	if (timecount0 >= COUNT_FOR_50ms)	/* 5 * 2ms = 10ms */
 	{
 		PORTD = ~PORTD;		/* Toggle all the bits */
 		timecount0 = 0;		/* Restart the overflow counter */
 	}
 }
-
 
 /*
 Question 5 Input Capture
@@ -151,7 +150,8 @@ Modify the program so that
 
 unsigned char timecount;				// Extends TCNT of Timer1
 unsigned int start_edge, end_edge;		// globals for times. Why global vars?
-unsigned long Time_Period;
+unsigned long Time_Period_High;
+unsigned long Time_Period_Low;
 
 int main(void)
 {
@@ -165,7 +165,9 @@ int main(void)
 	sei();
 	start_edge = 0;
 	timecount = 0;							/* Initialise timecount  */
-	Time_Period = 0;						/* Initialise Time_Period - not measured yet  */
+	Time_Period_High= 0;
+	Time_Period_Low= 0;
+					/* Initialise Time_Period - not measured yet  */
 	
 	while(1)
 	;	// Do nothing Loop
@@ -180,12 +182,56 @@ ISR(TIMER1_OVF_vect)	// See iom328p.h
 
 ISR(TIMER1_CAPT_vect)
 {
+	unsigned long Total_Time_Period = Time_Period_High + Time_Period_Low;
+
+	if(Time_Period_High > 500000)
+	{
+		PORTD &= 0b00000100;
+	}
+	else
+	{
+		PORTD |= 0b11111011;
+	}
+	
+	if(Time_Period_Low > 500000)
+	{
+		PORTD &= 0b00001000;
+	}
+	else
+	{
+		PORTD |= 0b11110111;
+	}
+	
+	if(Total_Time_Period > 500000)
+	{
+		PORTD &= 0b00010000;
+	}
+	else
+	{
+		PORTD |= 0b11101111;
+	}
+	
 	unsigned long clocks;					/* count of clocks in the pulse - not needed outside the ISR, so make it local */
 	
 	end_edge = ICR1;								/* The C compiler reads two 8bit regs for us  */
-	clocks = ((unsigned long)timecount * 65536) + (unsigned long)end_edge - (unsigned long)start_edge;
-	Time_Period = (clocks/2);						/* Result is in microseconds  */
+	if((TCCR1B & 0b0100000) == 0b0100000)
+	{
+		clocks = ((unsigned long)timecount * 65536) + (unsigned long)end_edge - (unsigned long)start_edge;
+		Time_Period_Low = clocks/2;
+		TCCR1B &= 0b10111111;
+		
+	}
+	else
+	{
+		clocks = ((unsigned long)timecount * 65536) + (unsigned long)end_edge - (unsigned long)start_edge;
+		Time_Period_High = clocks/2;
+		TCCR1B |= 0b0100000;
+		
+	}
+	//clocks = ((unsigned long)timecount * 65536) + (unsigned long)end_edge - (unsigned long)start_edge;
+	//Time_Period = (clocks/2);						/* Result is in microseconds  */
 	
 	timecount = 0;					// Clear timecount for next time around
 	start_edge = end_edge;			// We're counting rising to rising, so this end = next start
 	// Save its time for next time through here
+}
