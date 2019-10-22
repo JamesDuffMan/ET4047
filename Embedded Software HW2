@@ -1,0 +1,135 @@
+/*
+ * ET4047 Homework 2.c
+ *
+ * Created: 10/16/2019 11:07:21
+ * Author : tanne
+ */ 
+
+/* 
+Question 1 Timer0 Tick
+
+Modify the example program Timer0_Ex_10ms.c (available on Sulis under \Example Programs to toggle the bits of PORTD at exactly 5ms intervals – no approximations allowed.
+Note: a prescaler ratio of 256 won’t work. Note also: you may not need a rollover counter.
+*/
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#define DLY_1_ms 6 //5ms/(5 rollovers)
+/* We use 141 because we want Timer0 to count 125 counts, and 256-141 = 125  */
+#define COUNT_FOR_5ms	5
+
+unsigned int timecount0;
+
+
+int main(void)
+{
+	/* Set PortD to all outputs because LEDs are connected to this PORT */
+	DDRD = 0xff;	/* 0xff = 0b11111111; all ones */
+	PORTD = 0;		/* Initialise to all off */
+	
+	timecount0 = 0;		/* Initialise the overflow count. Note its scope */
+	TCCR0B = 0b00000011;	/* Set T0 Source = Clock (16MHz)/64 and put Timer in Normal mode */
+	
+	TCCR0A = 0;			/* Not strictly necessary as these are the reset states but it's good */
+	/* practice to show what you're doing */
+	TCNT0 = DLY_1_ms;			/* Recall: 256-61 = 195 & 195*64us = 12.48ms, approx 12.5ms	*/
+	TIMSK0 = (1<<TOIE0);		/* Enable Timer 0 interrupt	*/
+	
+	sei();						/* Global interrupt enable (I=1) */
+	
+	
+	while(1)
+	;						/* Do nothing loop */
+}
+
+ISR(TIMER0_OVF_vect)
+{
+	TCNT0 = DLY_1_ms;		/*	TCNT0 needs to be set to the start point each time */
+	++timecount0;			/* count the number of times the interrupt has been reached	*/
+	
+	if (timecount0 >= COUNT_FOR_10ms)	/* 5 * 2ms = 10ms */
+	{
+		PORTD = ~PORTD;		/* Toggle all the bits */
+		timecount0 = 0;		/* Restart the overflow counter */
+	}
+}
+
+/*
+Question 2 ADC Initialization
+
+Set up the Analog to Digital Converter as follows:
+	Select Chanel 5 of the ADMUX
+	ADC Left Adjust disabled (ADLAR=0)
+	Select the AVCC as the referenced voltage input (assume = 5.0V)
+	Enable the ADC
+	Set the ADC to Automatic Re-Trigger Mode, with Timer/Counter1 Capture Event as the trigger
+	Set the Clock Prescaler to 64
+	Start the ADC and enable its interrupt request
+(Hint: use the ADMUX and ADCSRA and ADCSRB registers to set these options. You can ignore ACME of ADCSRB)
+*/
+
+void anolog_digital_Preferences()
+{
+	ADMUX = 01000101; // AVCC set as the referenced voltage, ADLAR disabled and channel five selected.
+	ADCSRA = 11101110; // ADEN = 1,  ADSC = 1, ADATE = 1, ADIF = 0, ADIE =1, prescaler set to 64.
+	ADCSRB = 00000111; // ACME = 0, Timer/Counter1 Capture Event set as the trigger.
+}
+
+/*
+Question 3 ADC Resolution
+
+In an ATMega328P application, an external AREF Voltage of 3.3V has been set as the Analog-to-Digital Converter (ADC) reference voltage, so this is the full-scale voltage, Vfs. Answer the following questions, assuming a 10-bit ADC:
+	i. What is the resolution of the ADC in this configuration?
+			The resolution in this configuration is 3.22*10^-3.
+	ii. If the input voltage applied to the ADC is 2.765V, what result would you expect to read from the ADC register, which holds the conversion result?
+			The Reading from the ADC Register is 857.
+	iii. If the ADC result register has the data 0x319 (793), what voltage was applied at the ADC input pin?
+			The Voltage applied at the input pin is 2.556 Volts.
+*/
+
+/*
+Question 4 Timer – Interval or Tick setting
+
+Modify either the example program Timer0_Ex.c or Timer0_Ex_10ms.c (both available on Sulis under \Example Programs to toggle the bits of PORTD at exactly 50ms intervals – no approximations allowed – but this time using Timer2 in place of Timer0.
+You may assume that the ATMega328P is clocked at 16MHz, but you may need to modify the clock division ratio and the number of timer interrupts used for the required delay (timecount0).
+The structure of the program will be the same. Refer to the ATMega328P data sheet for descriptions of the ATMega328P Timer2 registers.
+*/
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#define DLY_2_ms 6 //50ms/(25 rollovers)
+/* We use 125 because we want Timer0 to count 131 counts, and 256-125 = 131  */
+#define COUNT_FOR_50ms	25
+
+int timer_Interval(void)
+{
+	/* Set PortD to all outputs because LEDs are connected to this PORT */
+	DDRD = 0xff;	/* 0xff = 0b11111111; all ones */
+	PORTD = 0;		/* Initialize to all off */
+	
+	timecount0 = 0;		/* Initialize the overflow count. Note its scope */
+	TCCR2B = 0b00000110;	/* Set T0 Source = Clock (16MHz)/256 and put Timer in Normal mode */
+	
+	TCCR2A = 0;			/* Not strictly necessary as these are the reset states but it's good */
+	/* practice to show what you're doing */
+	TCNT2 = DLY_2_ms;			/* Recall: 256-125 = 131 & 131*64us = 8.38ms, approx 8.38ms	*/
+	TIMSK2 = (1<<TOIE0);		/* Enable Timer 2 interrupt	*/
+	
+	sei();						/* Global interrupt enable (I=1) */
+	
+	
+	while(1)
+	;						/* Do nothing loop */
+}
+
+ISR(TIMER0_OVF_vect)
+{
+	TCNT2 = DLY_2_ms;		/*	TCNT2 needs to be set to the start point each time */
+	++timecount0;			/* count the number of times the interrupt has been reached	*/
+	
+	if (timecount0 >= COUNT_FOR_10ms)	/* 5 * 2ms = 10ms */
+	{
+		PORTD = ~PORTD;		/* Toggle all the bits */
+		timecount0 = 0;		/* Restart the overflow counter */
+	}
+}
