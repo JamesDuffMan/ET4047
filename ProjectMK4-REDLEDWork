@@ -17,6 +17,7 @@ unsigned int timecount0;
 unsigned int RGBDelay;
 unsigned int lightDetected = 0;
 unsigned int new_adc_data = 0;
+unsigned int buzzerFrequency = 0;
 
 
 void TimerJ(void);
@@ -83,7 +84,7 @@ void TimerJ()
 
 void ADCJ()
 {
-	ADMUX = ((1<<REFS0) | (0<<MUX0));  /* AVCC selected for VREF, ADC0 as ADC input  */
+	ADMUX = ((1<<REFS0) | (0<<MUX0));  /* AVCC selected for VREF */
 	ADCSRA = ((1<<ADEN)|(1<<ADSC)|(1<<ADATE)|(1<<ADIE)|(7<<ADPS0));
 										/* Enable ADC, Start Conversion, Auto Trigger enabled, 
 										   Interrupt enabled, Pre-scale = 128  */
@@ -199,51 +200,77 @@ ISR(TIMER0_OVF_vect)
 		else
 		{
 		PORTB = (PORTB & 0b11110001);
-		//PORTB = (PORTB & 0b00010000);
-		//PORTB = PORTB | 0b00010000;//red led on
-		}
-		
-		/* This is where i will attempt to do the light stuff*/
-		if((ADMUX & 0b00001111) == 0)
-		{
-			lightDetected = 1;
-		}
+		//check pind2 & if low then set buzzer to 40/20hz-buzztimerVariable
+		if((PIND2 & 0b00000100) == 0b00000100)
+		buzzerFrequency = 1/40;
 		else
-		{
-			lightDetected = 0;
-		}
-		new_adc_data = 1;
-		//if(adc_reading >= 500)//if the light detected is a certain reading i want to set values to it
+		buzzerFrequency = 1/20;
+		}	
 }
 
 ISR (ADC_vect)//handles ADC interrupts
-{
+{//a
 	unsigned int adc_reading;
+	
+	//if ((PIND3 & 0b00001000) == 0b00000000)
+	//	ADMUX = ((1<<REFS0) | (0<<MUX0));//a0
 	
 	adc_reading = ADC;   /* ADC is in Free Running Mode - you don't have to set up anything for 
 						    the next conversion */
-	if((ADMUX & 0b00001111) == 0)
-	{	
-	if (adc_reading > THRESHOLD_VALUE)
-	{
-		RGBDelay = 20; //RGBDelay1;
-	}
-	else
-	{
-		RGBDelay = 80; //RGBDelay2
-	}
-	}
-	else
-	{
-		if(adc_reading >= 500)//if the light detected is a certain reading i want to set values to it
-		{
-			lightDetected = 1;
-		}
+	/*if ((PIND3 & 0b00001000) == 0b00001000)
+	{//b	
+		if (adc_reading > THRESHOLD_VALUE)
+		{//c
+			RGBDelay = 20; //RGBDelay1;
+		}//c
 		else
-		{
-			lightDetected = 0;
-		}
-		new_adc_data = 1;
+		{//d
+			RGBDelay = 80; //RGBDelay2
+		}//d
 	}
-}
+	else
+	{//e
+		if(adc_reading >= 500)//if the light detected is a certain reading i want to set values to it
+		{//f
+			lightDetected = 1;
+			//PORTD = (PORTD & 0b11011111);//off
+			
+		}//f
+		else
+		{//g
+			lightDetected = 0;
+			//PORTD = (PORTD & 0b00100000);//on
+			
+		}//g
+		new_adc_data = 1;
+	}//e	
+	*/
+	if((ADMUX & 0b00001111) == 0)
+	{
+		if(adc_reading > THRESHOLD_VALUE)
+		{
+		RGBDelay = 20;
+		}else{
+			RGBDelay = 80;
+		}
+	}
+		
+	if((PIND & 0b00001000) == 0)
+	{
+		ADMUX = ADMUX | 0b00000001;
+	}
+	else
+	{
+		new_adc_data = 1;
+		if(adc_reading > 500)
+		lightDetected = 1;	
+		else
+		lightDetected = 0;
+	}
+	if((PIND & 0b00001000)==0b00001000)
+	{
+		ADMUX = ADMUX & 0b11110000;	
+	}
+		
+}//a
 
