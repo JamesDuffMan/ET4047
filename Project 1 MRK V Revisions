@@ -201,7 +201,7 @@ ISR(TIMER0_OVF_vect)
 		{
 		PORTB = (PORTB & 0b11110001);
 		//check pind2 & if low then set buzzer to 40/20hz-buzztimerVariable
-			if((PIND & 0b00001000) == 0)
+			/*if((PIND & 0b00001000) == 0)
 			{
 				if(lightDetected == 0)
 				{
@@ -214,7 +214,7 @@ ISR(TIMER0_OVF_vect)
 						PORTD = PORTD ^ (1 << PORTD5);
 					}
 				}
-			}
+			}*/
 		}
 		
 		
