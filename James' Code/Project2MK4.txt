@@ -1,0 +1,223 @@
+/*
+ * UART_EX1.c
+ *
+ * This program assumes a clock frequency of 8MHz
+ * Baud rate of 9600 used to keep dowm error
+ * Based on Barnett Example Fig 2-40
+ *
+ * Created: 17/10/2011 01:09:43
+ *  Author: 
+ */ 
+void sendmsg (char *s);
+
+void init_USART(void);
+void init_TIMER2SETUP(void);
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+unsigned char qcntr = 0,sndcntr = 0;   /*indexes into the que*/
+unsigned char queue[50];       /*character queue*/
+unsigned char timecount;				// Extends TCNT of Timer1
+unsigned int start_edge, end_edge;		// globals for times.
+unsigned long Time_Period_High;
+unsigned long Time_Period_Low;
+
+
+/*message arrays*/
+char msg1[] = {"That was an a or an A."};
+char msg2[] = {"That was a b, not an a."};
+char msg3[] = {"That was neither b nor a."};
+char msg4[] = {"You put in 0"};
+char msg5[] = {"You put in 1"};
+char msg6[] = {"Debug"};
+char msgDefault[] = {"Please use one of the key characters."};
+
+int main(void)
+{
+	char ch;  /* character variable for received character*/
+	DDRD = 0b00001000; //all as outputs except pin 0 as input
+	init_USART();
+	init_TIMER2SETUP();
+
+
+	sei(); /*global interrupt enable */
+
+	while (1)
+	{
+		if (UCSR0A & (1<<RXC0)) /*check for character received*/
+		{
+			ch = UDR0;    /*get character sent from PC*/
+			switch (ch)
+			{
+				
+/*				case 'A':
+				case 'a':
+					sendmsg(msg1); 
+				break;
+				case 'B':
+				case 'b':
+					sendmsg(msg2); 
+				break;
+*/			
+					
+				
+				case 'F':
+//				case 'f':
+					//spin motor forward
+				break;
+				case 'R':
+//				case 'r':
+					//spin motor reverse
+				break;
+				case 'B':
+//				case 'b':
+					//stop the motor(turn on break)
+				break;
+				case 'G':
+//				case 'g':
+					//start motor (Turn off break)
+				break;
+				case '0':
+					OCR2B = 0;
+					sendmsg(msg4);
+				break;
+				case '1':
+					OCR2B = 25;
+					sendmsg(msg5);
+				break;
+				case '2':
+					OCR2B = 50;
+				break;
+				case '3':
+					OCR2B = 75;
+				break;
+				case '4':
+					OCR2B = 100;
+				break;
+				case '5':
+					OCR2B = 125;
+				break;
+				case '6':
+					OCR2B = 150;
+				break;
+				case '7':
+					OCR2B = 175;
+				break;
+				case '8':
+					OCR2B = 200;
+				break;
+				case '9':
+					OCR2B = 225;
+				break;
+				case 'T':
+				case 't':
+					//
+				break;
+				case 'L':
+				case 'l':
+					//
+				break;
+				case 'H':
+				case 'h':
+					//
+				break;
+				case 'C':
+//				case 'c':
+					//
+				break;
+				case 'E':
+//				case 'e':
+					//
+				break;
+				case 'A':
+//				case 'a':
+					//
+				break;
+				case 'V':
+//				case 'v':
+					//
+				break;
+				case 'I':
+//				case 'i':
+					//
+				break;
+				case 'J':
+//				case 'j':
+					//
+				break;
+				case 'D':
+//				case 'd':
+					//
+				break;
+				case 'S':
+//				case 's':
+					//
+				break;
+				default:
+					sendmsg(msgDefault);
+			}
+		}
+	}
+	return 1;
+}
+
+void init_USART()
+{
+	UCSR0A	= 0x00;
+	UCSR0B	= (1<<RXEN0) | (1<<TXEN0) | (1<<TXC0);  /*enable receiver, transmitter and transmit interrupt*/
+	UBRR0	= 103;  /*baud rate = 9600*/
+}
+
+
+/************************************************************************************/
+/* USART sendmsg function															*/
+/*this function loads the queue and													*/
+/*starts the sending process														*/
+/************************************************************************************/
+
+void sendmsg (char *s)
+{
+	qcntr = 0;    /*preset indices*/
+	sndcntr = 1;  /*set to one because first character already sent*/
+	
+	queue[qcntr++] = 0x0d;   /*put CRLF into the queue first*/
+	queue[qcntr++] = 0x0a;
+	while (*s)
+		queue[qcntr++] = *s++;   /*put characters into queue*/
+		
+	UDR0 = queue[0];  /*send first character to start process*/
+}
+void init_TIMER1SETUP()
+{
+	//
+}
+
+void init_TIMER2SETUP()
+{
+	TCCR2A = 0b00100001;
+	TCCR2B = 0b00000111;
+	OCR2B = 0;
+	
+//	WGM20 = 1;
+//	WGM21 = 0;
+//	WGM22 = 0;
+//	COM2B0 = 0;
+//	COM2B1 = 1;
+	
+}
+
+/********************************************************************************/
+/* Interrupt Service Routines													*/
+/********************************************************************************/
+
+/*this interrupt occurs whenever the */
+/*USART has completed sending a character*/
+
+ISR(USART_TX_vect)
+{
+	/*send next character and increment index*/
+	if (qcntr != sndcntr)
+		UDR0 = queue[sndcntr++];
+}
+//will need to get both port b and port d set up
