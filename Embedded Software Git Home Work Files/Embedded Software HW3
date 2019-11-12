@@ -1,0 +1,107 @@
+/*
+ * ET4047 Homework 3.c
+ *
+ * Created: 11/12/2019 11:31:45
+ * Author : Tanner Garity (19114141)
+ */ 
+
+/*
+Question 1 - Setting an Additional Square Wave
+
+HW2Q3.c (Rename as HW3Q1.c before releasing this) is a program that sets a 20 kHz square wave of OC1A of an ATMega328P microcontroller, clocked at 16MHz. 
+Modify the program so that it also sets a 10 kHz square wave on OC1B of the microcontroller.
+*/
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+int main(void)
+{
+	DDRB = 0x08;		/* Express as a binary value, explain why this line is necessary */
+	
+	TCCR2A = /* Fill in these two lines */
+	TCCR2B = /* Fill in these two lines */
+	
+	OCR2A = 0;					/* Initial setting  */
+	
+	ADMUX = (1 << REFS0) | (0 << MUX0);			/* AVCC (5V) set as VRef, ADC0 selected as input V to ADC  */
+	ADCSRA = (1 << ADEN) | (1 << ADSC) | (1 << ADATE) | (1 << ADIE) | (7 << ADPS0);
+	/* ADC Enabled, ADC Conversion started (ADSC), Auto Trigger Enabled, Clk/128 is ADC clk */
+	/* We use Free Run mode, but we do need to start the first conversion  */
+	ADCSRB = (0 << ADTS0);					/* ADC Conversion complete (ADIF) retriggers a conversion  */
+	
+	sei();									/* Global Interrupt Enable after other interrupt initialisation */
+	
+	while(1)
+	;
+}
+
+ISR(ADC_vect)
+{
+	int adc_value;
+	
+	adc_value = ADC;
+	
+	adc_value = adc_value >> 2;			/* OCR2A is just 8-bits, so we reduce no of bits to 8 by 2 right shifts  */
+	
+	OCR2A = (unsigned char)adc_value;	/* New OCR2A value from ADC reading  */
+	
+	
+/*
+Question 2 PWM Initialisation
+
+HW2Q4.c ((Rename as HW3Q1.c before releasing this) is a program that sets up the ATMega328P so that the latest ADC reading sets the PWM output pulse, using OC2B of Timer/Counter2.
+	(A)	A number of initialisation lines have been left out, ie setting of TCCR2A and TCCR2B. Fill these lines in for the following operation:
+	
+		Phase correct PWM mode with TOP value = 0xFF
+		Clear OC2A on Compare Match when up-counting. Set OC2A on Compare Match when down-counting, (non-inverting mode)
+		Clock Source set to be clkT2S/1024 (From prescaler)
+
+(B)	By default the processor clock is set as clkT2s. Assuming that the processor clock frequency is 16MHz, what PWM frequency will be generated with these settings?
+*/
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+int main(void)
+{
+	DDRB = 0x08;		/* Express as a binary value, explain why this line is necessary */
+	
+	TCCR2A = /* Fill in these two lines */
+	TCCR2B = /* Fill in these two lines */
+	
+	OCR2A = 0;					/* Initial setting  */
+	
+	ADMUX = (1 << REFS0) | (0 << MUX0);			/* AVCC (5V) set as VRef, ADC0 selected as input V to ADC  */
+	ADCSRA = (1 << ADEN) | (1 << ADSC) | (1 << ADATE) | (1 << ADIE) | (7 << ADPS0);
+	/* ADC Enabled, ADC Conversion started (ADSC), Auto Trigger Enabled, Clk/128 is ADC clk */
+	/* We use Free Run mode, but we do need to start the first conversion  */
+	ADCSRB = (0 << ADTS0);					/* ADC Conversion complete (ADIF) retriggers a conversion  */
+	
+	sei();									/* Global Interrupt Enable after other interrupt initialisation */
+	
+	while(1)
+	;
+}
+
+ISR(ADC_vect)
+{
+	int adc_value;
+	
+	adc_value = ADC;
+	
+	adc_value = adc_value >> 2;			/* OCR2A is just 8-bits, so we reduce no of bits to 8 by 2 right shifts  */
+	
+	OCR2A = (unsigned char)adc_value;	/* New OCR2A value from ADC reading  */
+}
+
+
+
+/*
+Question 3 Serial Port and Buad Rate From the EE4524 2017 Exam
+
+(i)	Given an ATMega328P microcontroller with a 10 MHz clock, calculate the value to be written to the UBRR register, to select a Baud Rate of 115200 Baud, assuming that Double Speed mode is selected.
+
+(ii)	Calculate the % error from the ideal baud rate that will result from the UBRR0 value you have found.
+
+*/
