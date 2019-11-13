@@ -107,8 +107,29 @@ ISR(ADC_vect)
 /*
 Question 3 Serial Port and Buad Rate From the EE4524 2017 Exam
 
-(i) Given an ATMega328P microcontroller with a 10 MHz clock, calculate the value to be written to the UBRR register, to select a Baud Rate of 115200 Baud, assuming that Double Speed mode is selected.
-	The UBRRn value that is written to the UBRR register is 10 which is approximatly 10*10^6/(8*115200) due the fact that the value must be a rounded integer.
+(i)	Given an ATMega328P microcontroller with a 10 MHz clock, calculate the value to be written to the UBRR register, to select a Baud Rate of 115200 Baud, assuming that Double Speed mode is selected.
+		The UBRRn value that is written to the UBRR register = 10 which is approximatly 10*10^6/(8*115200) due the fact that the value must be a rounded integer.
 (ii) Calculate the % error from the ideal baud rate that will result from the UBRR0 value you have found.
-	The percent error between the Closest match Baud Rate and the Ideal Baud Rate is -1.36% which is calculated by first calculating the Closest Match Buad Rate = 113636 = 10*10^6/(8*11), and then by calculating the percent error = -1.36% = (113636/115200 - 1)
+		The percent error between the Closest match Baud Rate and the Ideal Baud Rate is -1.36% which is calculated by first calculating the Closest Match Buad Rate = 113636 = 10*10^6/(8*11), and then by calculating the percent error = -1.36% = (113636/115200 - 1)
 */
+
+/*
+Question 4 Serial Peripheral Interfaceing
+
+Write a short fragment of a program that initialises the SPCR and SPSR registers of the ATMega328P and then reads the conversion result from the ADS7866 into an integer variable called ADC_Result.
+Take into account the fact that the ATMega328P reads data from the ADC using two 8-bit read operations.
+*/
+
+void main()
+{
+	SPCR = 1;  // initialises the SPCR register
+	SPSR = (1<<SPI2X);  /* by setting setting SPI2X to one the highest buad rate is assured, in order for effective data transmission */
+	unsigned int ADC_Result;
+	do 
+	{
+		PORTB &= 11111011;  /* Starts the conversion on PORTB, there is no register for writing into */
+		SPDR = 0; /* will be ingnored */
+		ADC_Result = ADC_Result << 8; /* Shifts SPDR to the high 8 bits in order to be read and since SPDR = 0 a clock is generated */
+	} while (!(SPSR&(1<<SPIF))); 
+	ADC_Result = ADC_Result|SPDR;  /* Configuration data is sent every time */
+}
