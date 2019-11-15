@@ -125,11 +125,15 @@ void main()
 	SPCR = 1;  // initialises the SPCR register
 	SPSR = (1<<SPI2X);  /* by setting setting SPI2X to one the highest buad rate is assured, in order for effective data transmission */
 	unsigned int ADC_Result;
-	do 
-	{
-		PORTB &= 11111011;  /* Starts the conversion on PORTB, there is no register for writing into */
-		SPDR = 0; /* will be ingnored */
-		ADC_Result = ADC_Result << 8; /* Shifts SPDR to the high 8 bits in order to be read and since SPDR = 0 a clock is generated */
-	} while (!(SPSR&(1<<SPIF))); 
-	ADC_Result = ADC_Result|SPDR;  /* Configuration data is sent every time */
+	PORTB &= 11111011;  /* Starts the conversion on PORTB, there is no register for writing into */
+	SPDR = 0; /* will be ingnored */
+	 while (!(SPSR&(1<<SPIF)))  /* Wait until the condition is true and then exit the loop */
+		; 
+	ADC_Result = SPDR;  /* Reads and stores the conversion result in ADC_Result */
+	ADC_Result = ADC_Result << 8; /* Shifts the bits in SPDR to the high byte in order to be read first */
+	SPDR = 0;
+	while(!(SPDR & (1<<SPIF))) /* Wait until the condition is true and then exit the loop */
+		;
+	ADC_Result = ADC_Result + SPDR; /* Reads the conversion result when the the Serial Peripheral Data Register is low */
+	PORTB |= 0b00000100;
 }
