@@ -1,0 +1,69 @@
+/* Do not submit on sulis, very rough */
+
+/*
+ * ET4047 Homework 4.c
+ *
+ * Created: 11/19/2019 11:52:36
+ * Author : Tanner Garity (19114141)
+ */ 
+
+
+/*
+Question 1 The Value of the TWBR Register
+
+Based on the following information from the ATMega328P data sheet, calculate the value to be written to the TWBR register, if the Prescaler value is set to 4.
+	TWBR = Value of the TWI Bit Rate Register TWBRn
+	PrescalerValue = Value of the prescaler, see description of the TwI Prescaler bits in the TWSR Status Register description (TWSRn.TWPS[1:0])
+The SCL frequency should be set to the highest possible frequency but must not exceed 250 kHz.
+
+*/
+
+
+/*
+Question 2 ATMega328P Stack Pointer
+
+The stack in the ATMega328P grows downwards.
+Assuming an initial value of the Stack Pointer Register (SP) of 0x4f8, state the value of the SP at points A, B and C in the code fragment below.
+*/
+
+ASM_CODE_RTN:
+	push r10
+	push r12
+	push r20
+	push r5
+	push r21
+; // POINT A here
+
+;	//other code here
+
+pop r21
+; // POINT B here
+	pop r5
+	pop r20
+	pop r12
+	pop r10
+; // POINT C here
+ret
+
+
+/*
+Question 3 Rapid Prototyping
+
+A C program needs to call a function named fast_response(int x1, int y1, int z1, int t1);
+The function fast_response is written in Assembly Language.
+	Write the function prototype for fast_response that must be included in the C program for the code to be compiled, and made visible to the assembly code.
+	Write the declaration of the function fast_response that must be included in the assembly language file, to allow the code to be visible to the C code.
+	What registers will be used to pass the values of x1, y1, z1, and t1, to the fast_response assembly function?
+	(Note: you are not asked to write code for the assembly functions – just prototypes and declarations.)
+*/
+
+
+/*
+Question 4 ATMega328P Assembly Code
+
+Given the assembly language mnemonics below (or others if you prefer), write a short piece of code to search an array of 0x40 bytes, starting at address 0x240 for the value 0x55.
+If found, place (MOV) the value 1 in register R0, otherwise place the value 0 in R0.
+
+MOV, LDI, ST, DEC, BRNE, CP, CPI
+See the AVR Instruction Set Document (doc0856.pdf) (Sulis) for details on each of these instructions.
+*/
