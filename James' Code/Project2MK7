@@ -1,0 +1,335 @@
+/*
+ * UART_EX1.c
+ *
+ * This program assumes a clock frequency of 8MHz
+ * Baud rate of 9600 used to keep dowm error
+ * Based on Barnett Example Fig 2-40
+ *
+ * Created: 17/10/2011 01:09:43
+ *  Author: 
+ */ 
+void sendmsg (char *s);
+
+void init_USART(void);
+void init_TIMER2SETUP(void);
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <stdio.h>
+
+unsigned char qcntr = 0,sndcntr = 0;   /*indexes into the que*/
+unsigned char queue[50];       /*character queue*/
+unsigned char timecount;				// Extends TCNT of Timer1
+unsigned int start_edge, end_edge;		// globals for times.
+unsigned long Time_Period_High;
+unsigned long Time_Period_Low;
+unsigned long clocks;
+char msg_buffer[30];
+/*message arrays*/
+char msg0[] = {"You put in 0, spinning at 0%"};
+char msg1[] = {"You put in 1, spinning at 10%"};
+char msg2[] = {"You put in 2, spinning at 20%"};
+char msg3[] = {"You put in 3, spinning at 30%"};
+char msg4[] = {"You put in 4, spinning at 40%"};
+char msg5[] = {"You put in 5, spinning at 50%"};
+char msg6[] = {"You put in 6, spinning at 60%"};
+char msg7[] = {"You put in 7, spinning at 70%"};
+char msg8[] = {"You put in 8, spinning at 80%"};
+char msg9[] = {"You put in 9, spinning at 90%"};
+char msgR[] = {"You put in R, spinning in reverse"};
+char msgF[] = {"You put in F, spinning forward"};
+char msgB[] = {"You put in B, stopping the motor"};
+char msgG[] = {"You put in G, resuming the motor"};		
+char msgT[] = {""};
+//char msgL[] = {Time_Period_Low};
+//char msgH[] = {Time_Period_High};
+char msgC[] = {""};
+char msgE[] = {""};
+char msgA[] = {""};
+char msgV[] = {""};
+char msgDirectionForward[] = {"It's spinning forward"};
+char msgDirectionReverse[] = {"It's spinning in reverse"};
+char msgFiller[] = {"The time taken in microseconds is: "};
+char msgD[] = {"Debug"};
+char msgDefault[] = {"Please use one of the key characters."};
+
+int main(void)
+{
+	char ch;  /* character variable for received character*/
+	DDRD = 0b00001000;
+	DDRB = 0b00010010;
+	init_USART();
+	init_TIMER2SETUP();
+//	int motorSpeed = 0;				
+	unsigned int motorDirection = 0;			//1 = forward, 2 = backwards
+	
+	TCCR1A = 0; // Disable all o/p waveforms
+	TCCR1B = 0b00000010;		// Noise Canceller off, Falling Edge, CLK/8 (2MHz) *OLDCODE CLK/8 (2MHz) T1 source ((1<<ICNC1) | (1<<ICES1) | (2<<CS10));*
+	TIMSK1 = 0b00100001;//((1<<ICIE1) | (1 << TOIE1));
+//	TIMSK1 = 				// Enable T1 OVF, T1 Input Cap Interrupt
+	TIMSK2 = 0b00000000;
+//	Time_Period_High = 55;
+
+	sei(); /*global interrupt enable */
+	start_edge = 0;
+	timecount = 0;
+	while (1)
+	{
+		if (UCSR0A & (1<<RXC0)) /*check for character received*/
+		{
+			ch = UDR0;    /*get character sent from PC*/
+			switch (ch)
+			{
+/*
+'F' or 'f': Set Direction of motor spin to Forward.
+'R' or 'r': Set Direction of motor spin to Reverse.
+‘B’ or ‘b’: Stop motor irrespective of the motor speed previously selected – ie Turn on Brake
+‘G’ or ‘g’: Start the motor (depends on the motor speed previously selected) – ie Turn off Brake
+‘0’ to ‘9’: Set the motor speed using the OC2RB register, to value from 0 to 90% of full speed. You must convert the char value to an integer, and set the PWM based on this value.
+‘T’ or ‘t’: Report the period of the 555 Timer in microseconds.								WW
+‘L’ or ‘l’: Report the time taken by the low pulse of the 555 Timer signal in microseconds  WW
+‘H’ or ‘h’: Report the time taken by the high pulse of the 555 Timer signal in microseconds WW
+'C' or 'c': Continuously report the Timer input period in microseconds.
+‘E’ or ‘e’: Stop continuous reporting of Timer input.
+‘A’ or ‘a’: Report the ADC0 conversion result. This is the ADC value.
+‘V’ or ‘v’: Report the ADC0 conversion result in mV. You must convert the ADC value to mV
+'I' or 'i': Continuously report the ADC0 conversion result in mV.
+‘J’ or ‘j’: Stop continuous reporting of ADC0 input.
+'D' or 'd': Report motor direction to user. 
+‘S’ or ‘s’: Report the current value of the OCR2B register to the user.
+*/					
+				case 'F':
+				case 'f':
+					PORTB = (PORTB & 0b11101111);//PORTB = (PORTB & 0b11101111);
+					sendmsg(msgF);
+					motorDirection = 1;
+				break;
+				case 'R':
+				case 'r':
+					PORTB = (PORTB | 0b00010000);//1<<PORTB4 PORTB = (PORTB | 0b00010000);
+					sendmsg(msgR);
+					motorDirection = 2;
+				break;
+				case 'B':
+				case 'b':
+					PORTB = (PORTB | 0b00000010);
+//					PORTB |= (1<<PORTB1);
+//					OCR2B = 0;
+					sendmsg(msgB);
+				break;
+				case 'G':
+				case 'g':
+					PORTB = (PORTB & 0b11111101);						//free the location 1 so that it will go again
+/*					OCR2B = motorSpeed;									//resume it at the speed it was before the break was called
+					sendmsg(msgG);										//send the message that it is going again
+					if(motorDirection == 1)								//depending on what the value for motor direction is, i want the motor to remain spinning in the same direction it was before the break was called.
+					{
+						PORTB = (PORTB & 0b00000000);
+					}
+					else
+					{
+						PORTB = (PORTB | 0b00010000);
+					}
+*/
+				break;
+				case '0':
+					OCR2B = 0;
+//					motorSpeed = 0;
+					sendmsg(msg0);
+				break;
+				case '1':
+					OCR2B = 25;
+//					motorSpeed = 25;
+					sendmsg(msg1);
+				break;
+				case '2':
+					OCR2B = 50;
+//					motorSpeed = 50;
+					sendmsg(msg2);
+				break;
+				case '3':
+					OCR2B = 75;
+//					motorSpeed = 75;
+					sendmsg(msg3);
+				break;
+				case '4':
+					OCR2B = 100;
+//					motorSpeed = 100;
+					sendmsg(msg4);
+				break;
+				case '5':
+					OCR2B = 125;
+//					motorSpeed = 125;
+					sendmsg(msg5);
+				break;
+				case '6':
+					OCR2B = 150;
+//					motorSpeed = 150;
+					sendmsg(msg6);
+				break;
+				case '7':
+					OCR2B = 175;
+//					motorSpeed = 175;
+					sendmsg(msg7);
+				break;
+				case '8':
+					OCR2B = 200;
+//					motorSpeed = 200;
+					sendmsg(msg8);
+				break;
+				case '9':
+					OCR2B = 225;
+//					motorSpeed = 225;
+					sendmsg(msg9);
+				break;
+
+				case 'T':
+				case 't':
+					sprintf(msg_buffer,"Period in microseconds = %lu", clocks);
+					sendmsg(msg_buffer);
+				break;
+				case 'L':
+				case 'l':
+//					sendmsg(msgFiller);
+//					sendmsg(msgL);
+					sprintf(msg_buffer,"Low = %lu", Time_Period_Low);
+					sendmsg(msg_buffer);
+				break;
+				case 'H':
+				case 'h':
+//					sendmsg(msgFiller);
+//					sendmsg(msgH);
+					sprintf(msg_buffer,"High = %lu", Time_Period_High);
+					sendmsg(msg_buffer);
+				break;
+				case 'C':
+//				case 'c':
+					//
+				break;
+				case 'E':
+//				case 'e':
+					//
+				break;
+				case 'A':
+//				case 'a':
+					//
+				break;
+				case 'V':
+//				case 'v':
+					//
+				break;
+				case 'I':
+//				case 'i':
+					//
+				break;
+				case 'J':
+//				case 'j':
+					//
+				break;
+				case 'D':
+				case 'd':
+					if(motorDirection == 1)
+					sendmsg(msgDirectionForward);
+					else
+					sendmsg(msgDirectionReverse);
+					//
+				break;
+				case 'S':
+				case 's':
+					sprintf(msg_buffer,"OCR2B value is = %d", OCR2B);
+					sendmsg(msg_buffer);
+				break;
+				default:
+					sendmsg(msgDefault);
+			}
+		}
+	}
+	return 1;
+}
+
+void init_USART()
+{
+	UCSR0A	= 0x00;
+	UCSR0B	= (1<<RXEN0) | (1<<TXEN0) | (1<<TXC0);  /*enable receiver, transmitter and transmit interrupt*/
+	UBRR0	= 103;  /*baud rate = 9600*/
+}
+
+
+/************************************************************************************/
+/* USART sendmsg function															*/
+/*this function loads the queue and													*/
+/*starts the sending process														*/
+/************************************************************************************/
+
+void sendmsg (char *s)
+{
+	qcntr = 0;    /*preset indices*/
+	sndcntr = 1;  /*set to one because first character already sent*/
+	
+	queue[qcntr++] = 0x0d;   /*put CRLF into the queue first*/
+	queue[qcntr++] = 0x0a;
+	while (*s)
+		queue[qcntr++] = *s++;   /*put characters into queue*/
+		
+	UDR0 = queue[0];  /*send first character to start process*/
+}
+void init_TIMER1SETUP()
+{
+	//
+}
+
+void init_TIMER2SETUP()
+{
+	TCCR2A = 0b00100001;
+	TCCR2B = 0b00000111;
+	OCR2B = 0;
+	
+//	WGM20 = 1;
+//	WGM21 = 0;
+//	WGM22 = 0;
+//	COM2B0 = 0;
+//	COM2B1 = 1;
+	
+}
+
+ISR(TIMER1_OVF_vect)	// See iom169pa.h
+{
+	++timecount;		// Inc overflow counter on interrupt
+}
+
+ISR(TIMER1_CAPT_vect)
+{
+	end_edge = ICR1;	// The C compiler reads two 8bit regs for us
+//	Time_Period_Low = 100;
+	
+	clocks = ((unsigned long)timecount * 65536) + (unsigned long)end_edge - (unsigned long)start_edge;
+	
+	if (TCCR1B & 0b01000000)  //on falling edge  (1<<ICES1)) 
+	{
+		Time_Period_Low = (clocks)/2;
+//		Time_Period_Low = 200;
+	}
+	else                                 //on rising edge
+	{
+		Time_Period_High = (clocks)/2;
+//		Time_Period_High = 400;
+	} 
+	
+	if (TCCR1B & 0b01000000)
+		TCCR1B = 0b00000010;
+	else
+		TCCR1B = 0b01000010;
+		
+	timecount = 0;					// Clear timecount for next time around
+	start_edge = end_edge;			// We're counting rising to rising, so this end = next start
+	// Save its time for next time through here
+	
+}
+
+ISR(USART_TX_vect)
+{
+	/*send next character and increment index*/
+	if (qcntr != sndcntr)
+		UDR0 = queue[sndcntr++];
+}
+//will need to get both port b and port d set up
