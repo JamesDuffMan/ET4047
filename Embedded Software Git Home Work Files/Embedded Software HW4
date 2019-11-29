@@ -14,7 +14,7 @@ Based on the following information from the ATMega328P data sheet, calculate the
 	PrescalerValue = Value of the prescaler, see description of the TwI Prescaler bits in the TWSR Status Register description (TWSRn.TWPS[1:0])
 The SCL frequency should be set to the highest possible frequency but must not exceed 250 kHz.
 	
-		The TWRBR is has a value of 8 = 1/8((16*10^6/250,000) - 16).
+		The TWRBR is has a value of 6 = 1/8((16*10^6/250,000) - 16).
 
 */
 
@@ -58,7 +58,7 @@ The function fast_response is written in Assembly Language.
 */
 
 extern int fast_response(int x1, int y1, int z1, int t1); /* prototype function is written in C so that the program will be compiled */
-.global fast_response(int x1, int y1, int z1, int t1) /* fast_response is declared */
+.global fast_response /* fast_response is declared */
 
 /* The registers associated with passing x1 are r25 and r24. Though the registers used with passing y1 are r23 and r22.  The registers affiliated with passing z1 are r21 and r20. While the registers that are correlated with passing t1 are r19 and r18. */
 
@@ -72,10 +72,12 @@ MOV, LDI, ST, DEC, BRNE, CP, CPI
 See the AVR Instruction Set Document (doc0856.pdf) (Sulis) for details on each of these instructions.
 */
 
+ASM(.s)
+
 Cowlv r16
-	LDI r16, 0x40 /* r16 is the counter and 0x40 is pushed on to r16 */
-	LDI r26, 0x40
-	LDI r27, 0x02
+	ldi r16, 0x40 /* r16 is the counter and 0x40 is pushed on to r16 */
+	ldi r26, 0x40 /* load 0x40 into r26 and Set X high byte to 0x40 */
+	ldi r27, 0x02 /* load 0x02 into r27 and set X low byte to 0x02*/
 
 Loopstart: Ld r17, [X+] /* gets information that was stored at the register addresses and also increments X by 1 */
 
@@ -83,8 +85,8 @@ Loopstart: Ld r17, [X+] /* gets information that was stored at the register addr
 	
 	 BRNE not_found
 	 
-	 LDI r18, //?
-	 LDI r0, r18
+	 ldi r18, //?
+	 ldi r0, r18
 	 rjm finished
 	
 not_found; LDI r18, 0
