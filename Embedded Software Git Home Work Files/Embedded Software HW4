@@ -74,10 +74,9 @@ See the AVR Instruction Set Document (doc0856.pdf) (Sulis) for details on each o
 
 ASM(.s)
 
-Cowlv r16
 	ldi r16, 0x40 /* r16 is the counter and 0x40 is pushed on to r16 */
 	ldi r26, 0x40 /* load 0x40 into r26 and Set X high byte to 0x40 */
-	ldi r27, 0x02 /* load 0x02 into r27 and set X low byte to 0x02*/
+	ldi r27, 0x02 /* load 0x02 into r27 and set X low byte to 0x02 */
 
 Loopstart: Ld r17, [X+] /* gets information that was stored at the register addresses and also increments X by 1 */
 
@@ -85,12 +84,12 @@ Loopstart: Ld r17, [X+] /* gets information that was stored at the register addr
 	
 	 BRNE not_found
 	 
-	 ldi r18, //?
-	 ldi r0, r18
-	 rjm finished
+	 ldi r18, 1   /* load 1 into r18 */
+	 mov r0, r18  /* copys data from r18 to r0 */
+	 rjmp finished
 	
-not_found; LDI r18, 0
-	MOV r0, r10
+not_found: LDI r18, 0
+	MOV r0, r18 /* copys data from r18 to r0 */
 	DEC r16
-	BRNE Loopstart
+	BRNE Loopstart /* If r16 is not equal 1 go back to Loopstart otherwise go on to finished: */
 finished:
